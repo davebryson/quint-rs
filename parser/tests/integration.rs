@@ -1,5 +1,4 @@
-use quint_evaluator::evaluator::run;
-use quint_evaluator::ir::LookupTable;
+use quint_evaluator::{evaluator::run, ir::LookupTable};
 use quint_parser::parse_quint_expr;
 
 #[test]

@@ -81,20 +81,81 @@ extern {
   type Error = LexicalError;
 
   enum Token {
-    "module" => Token::Module,
-    "var" => Token::Var,
-    "identifier" => Token::LowId(<String>),
-    "cap_id" => Token::CapId(<String>),
     "int" => Token::Int(<i64>),
     "str" => Token::String(<String>),
     "bool" => Token::Bool(<bool>),
-    "(" => Token::LParen,
-    ")" => Token::RParen,
-    "=" => Token::Assign,
+
+    "identifier" => Token::LowId(<String>),
+    "cap_id" => Token::CapId(<String>),
+
     "+" => Token::Add,
     "-" => Token::Sub,
     "*" => Token::Mul,
     "/" => Token::Div,
+    "%" => Token::Mod,
+
+    "=" => Token::Assign,
+    "==" => Token::EQ,
+    "!=" => Token::NE,
+    ">" => Token::GT,
+    "<" => Token::LT,
+    ">=" => Token::GE,
+    "<=" => Token::LE,
+
+    "," => Token::Comma,
     ":" => Token::Colon,
+    ";" => Token::SemiColon,
+    "::" => Token::DoubleColon,
+    "." => Token::Period,
+    "'" => Token::Prime,
+    "|" => Token::Pipe,
+    "->" => Token::Arrow,
+    "=>" => Token::DoubleArrow,
+    "^" => Token::Hat,
+    "_" => Token::Underscore,
+    "..." => Token::Ellipsis,
+
+    "(" => Token::LParen,
+    ")" => Token::RParen,
+    "{" => Token::LBrace,
+    "}" => Token::RBrace,
+    "[" => Token::LBracket,
+    "]" => Token::RBracket,
+
+    "module" => Token::Module,
+    "const" => Token::Const,
+    "assume" => Token::Assume,
+    "var" => Token::Var,
+    "val" => Token::Val,
+    "def" => Token::Def,
+    "pure" => Token::Pure,
+    "action" => Token::Action,
+    "temporal" => Token::Temporal,
+    "nondet" => Token::Nondet,
+    "run" => Token::Run,
+
+    "all" => Token::All,
+    "any" => Token::Any,
+    "all" => Token::All,
+    "if" => Token::If,
+    "iff" => Token::Iff,
+    "else" => Token::Else,
+    "and" => Token::And,
+    "or" => Token::Or,
+    "implies" => Token::Implies,
+    "match" => Token::Match,
+
+    "Set" => Token::Set,
+    "List" => Token::List,
+
+    "import" => Token::Import,
+    "export" => Token::Export,
+
+    "from" => Token::From,
+    "as" => Token::As,
+
+    "type" => Token::Type,
+
+    "/*" => Token::Comment,
   }
 }
