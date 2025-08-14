@@ -1,0 +1,15 @@
+[workspace]
+resolver = "2"
+
+members = ["parser", "evaluator"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+
+[workspace.dependencies]
+argh = "0.1.13"
+eyre = "0.6.12"
+thiserror = "2.0.11"
+hipstr = { version = "0.8.0", features = ["serde"] }
