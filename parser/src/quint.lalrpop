@@ -21,10 +21,29 @@ QuintDeclaration: QuintDeclaration = {
 
 // TODO: check precedence
 pub QuintEx: QuintEx = {
-    #[precedence(level="1")]
+    #[precedence(level="0")]
     ExpTerm,
 
-    #[precedence(level="2")] #[assoc(side="left")]
+    <lhs:QuintEx> "[" <rhs:QuintEx>  "]" => {
+        QuintEx::QuintApp{
+          id: helper.get_id(), 
+          opcode: "List".into(), 
+          args: vec![lhs, rhs]
+        }
+    },
+
+    #[assoc(side="right")]
+    #[precedence(level="1")]
+    <lhs:QuintEx> "^" <rhs:QuintEx> => {
+        QuintEx::QuintApp{
+          id: helper.get_id(), 
+          opcode: "ipow".into(), 
+          args: vec![lhs, rhs]
+        }
+    },
+
+    #[assoc(side="left")]
+    #[precedence(level="3")]
     <lhs:QuintEx> "*" <rhs:QuintEx> => {
         QuintEx::QuintApp{
           id: helper.get_id(), 
@@ -32,7 +51,6 @@ pub QuintEx: QuintEx = {
           args: vec![lhs, rhs]
         }
     },
-    #[precedence(level="2")] #[assoc(side="left")]
     <lhs:QuintEx> "/" <rhs:QuintEx> => {
         QuintEx::QuintApp{
           id: helper.get_id(), 
@@ -40,7 +58,9 @@ pub QuintEx: QuintEx = {
           args: vec![lhs, rhs]
         }
     },
-    #[precedence(level="3")] #[assoc(side="left")]
+
+    #[assoc(side="left")]
+    #[precedence(level="3")]
     <lhs:QuintEx> "+" <rhs:QuintEx> => {
         QuintEx::QuintApp{
           id: helper.get_id(), 
@@ -55,6 +75,24 @@ pub QuintEx: QuintEx = {
           args: vec![lhs, rhs]
         }
     },
+
+    <lhs:QuintEx> ">" <rhs:QuintEx> => {
+        QuintEx::QuintApp{
+          id: helper.get_id(), 
+          opcode: "igt".into(), 
+          args: vec![lhs, rhs]
+        }
+    },
+
+    <lhs:QuintEx> "<" <rhs:QuintEx> => {
+        QuintEx::QuintApp{
+          id: helper.get_id(), 
+          opcode: "ilt".into(), 
+          args: vec![lhs, rhs]
+        }
+    },
+
+
 }
 
 ExpTerm: QuintEx = {
@@ -72,8 +110,6 @@ ExpTerm: QuintEx = {
   },
    "(" <e:QuintEx> ")" => e
 }
-
-
 
 // Lexer
 extern {

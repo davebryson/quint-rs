@@ -1,15 +1,38 @@
-use quint_evaluator::{evaluator::run, ir::LookupTable};
-use quint_parser::parse_quint_expr;
+use quint_evaluator::{evaluator::run, ir::LookupTable, value::Value};
+use quint_parser::{QuintError, parse_quint_expr};
+
+fn eval_expr(expr: &str) -> Result<Value, QuintError> {
+    let parsed = parse_quint_expr(expr);
+    assert!(parsed.is_ok());
+    let table = LookupTable::default();
+    run(&table, &parsed.unwrap())
+}
+
+macro_rules! check_expr {
+    ($expr:expr, $expected:expr, i64) => {{
+        let value = eval_expr($expr);
+        assert_eq!($expected, value.unwrap().as_int());
+    }};
+    ($expr:expr, $expected:expr, bool) => {{
+        let value = eval_expr($expr);
+        assert_eq!($expected, value.unwrap().as_bool());
+    }};
+    ($expr:expr, $expected:expr, &str) => {{
+        let value = eval_expr($expr);
+        assert_eq!($expected, value.unwrap().as_str());
+    }};
+}
 
 #[test]
 fn basic_integration() {
-    // parse the expression
-    let parsed = parse_quint_expr("(1+(2*3))");
-    assert!(parsed.is_ok());
+    check_expr!("2^2 + 1", 5i64, i64);
+    check_expr!("(1+(2*3))", 7i64, i64);
+    check_expr!("10 / 5 * 2", 4i64, i64);
 
-    // run the interpreter
-    let table = LookupTable::default();
-    let value = run(&table, &parsed.unwrap());
+    check_expr!("true", true, bool);
+    check_expr!("false", false, bool);
+    check_expr!("5 > 2", true, bool);
+    check_expr!("2 < 5", true, bool);
 
-    assert_eq!(7i64, value.unwrap().as_int());
+    check_expr!("\"hello\"", "hello", &str);
 }

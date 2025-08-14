@@ -1,8 +1,6 @@
 //!
 //! Lexer for Quint
 //!
-//! Extract the tokens for the Parser
-//!
 use std::num::ParseIntError;
 
 use logos::{Lexer, Logos, SpannedIter};
@@ -56,7 +54,8 @@ fn remove_quotes(lex: &mut Lexer<Token>) -> String {
 /// on Comment (below)
 ///
 #[derive(Debug, Logos, PartialEq, Eq, Hash, Clone)]
-// skip: tabs,newlines,returns,single line comments
+// skip: tabs,newlines,returns,double/triple line comments.
+// Note we handle block comments below.
 #[logos(
     skip r"[ \t\r\n]+", 
     skip r"//[^\n]*", 
