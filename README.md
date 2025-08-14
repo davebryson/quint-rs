@@ -16,9 +16,11 @@ Currently we're using:
 * [logos](https://logos.maciej.codes/intro.html) as the lexer for its ease of use, performance, and community support.
 * [lalrpop](https://lalrpop.github.io/lalrpop/)  for many of the same reasons as the lexer
 
+> Note: the `evaluator` crate is copied directly from the [Quint repository](https://github.com/informalsystems/quint/tree/main/evaluator) to use it for testing and integration with the lexer/parser.
+
 ## Status
 * Lexer mostly done
-* Parser with IR transformation (in the works)
+* Parser with IR transformation (just at the beginning of that steep hill)
 * Basic example of interacting with the interpreter
 
 Example:
