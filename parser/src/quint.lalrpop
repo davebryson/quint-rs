@@ -1,5 +1,5 @@
 use crate::{QuintEx, QuintDeclaration, QuintVar};
-use crate::utils::QuintIdGenerator;
+use crate::utils::{QuintIdGenerator, make_quint_app};
 use crate::lexer::{Token, LexicalError};
 
 grammar(helper: &mut QuintIdGenerator);
@@ -19,77 +19,69 @@ QuintDeclaration: QuintDeclaration = {
 }
 
 
-// TODO: check precedence
+// TODO: check precedence (not complete yet)
 pub QuintEx: QuintEx = {
     #[precedence(level="0")]
     ExpTerm,
 
-    <lhs:QuintEx> "[" <rhs:QuintEx>  "]" => {
-        QuintEx::QuintApp{
-          id: helper.get_id(), 
-          opcode: "List".into(), 
-          args: vec![lhs, rhs]
-        }
-    },
 
     #[assoc(side="right")]
     #[precedence(level="1")]
     <lhs:QuintEx> "^" <rhs:QuintEx> => {
-        QuintEx::QuintApp{
-          id: helper.get_id(), 
-          opcode: "ipow".into(), 
-          args: vec![lhs, rhs]
-        }
+        make_quint_app(helper.get_id(), "ipow", vec![lhs, rhs])
     },
 
+    // operators
     #[assoc(side="left")]
     #[precedence(level="3")]
     <lhs:QuintEx> "*" <rhs:QuintEx> => {
-        QuintEx::QuintApp{
-          id: helper.get_id(), 
-          opcode: "imul".into(), 
-          args: vec![lhs, rhs]
-        }
+        make_quint_app(helper.get_id(), "imul", vec![lhs, rhs])
     },
     <lhs:QuintEx> "/" <rhs:QuintEx> => {
-        QuintEx::QuintApp{
-          id: helper.get_id(), 
-          opcode: "idiv".into(), 
-          args: vec![lhs, rhs]
-        }
+        make_quint_app(helper.get_id(), "idiv", vec![lhs, rhs])
+    },
+    <lhs:QuintEx> "%" <rhs:QuintEx> => {
+        make_quint_app(helper.get_id(), "imod", vec![lhs, rhs])
     },
 
     #[assoc(side="left")]
-    #[precedence(level="3")]
+    #[precedence(level="4")]
     <lhs:QuintEx> "+" <rhs:QuintEx> => {
-        QuintEx::QuintApp{
-          id: helper.get_id(), 
-          opcode: "iadd".into(), 
-          args: vec![lhs, rhs]
-        }
+        make_quint_app(helper.get_id(), "iadd", vec![lhs, rhs])
     },
     <lhs:QuintEx> "-" <rhs:QuintEx> => {
-        QuintEx::QuintApp{
-          id: helper.get_id(), 
-          opcode: "isub".into(), 
-          args: vec![lhs, rhs]
-        }
+        make_quint_app(helper.get_id(), "isub", vec![lhs, rhs])
     },
 
+    // relations
     <lhs:QuintEx> ">" <rhs:QuintEx> => {
-        QuintEx::QuintApp{
-          id: helper.get_id(), 
-          opcode: "igt".into(), 
-          args: vec![lhs, rhs]
-        }
+        make_quint_app(helper.get_id(), "igt", vec![lhs, rhs])
+    },
+    <lhs:QuintEx> ">=" <rhs:QuintEx> => {
+        make_quint_app(helper.get_id(), "igte", vec![lhs, rhs])
+    },
+    <lhs:QuintEx> "<" <rhs:QuintEx> => {
+        make_quint_app(helper.get_id(), "ilt", vec![lhs, rhs])
+    },
+    <lhs:QuintEx> "<=" <rhs:QuintEx> => {
+        make_quint_app(helper.get_id(), "ilte", vec![lhs, rhs])
+    },
+    <lhs:QuintEx> "!=" <rhs:QuintEx> => {
+        make_quint_app(helper.get_id(), "neq", vec![lhs, rhs])
+    },
+    <lhs:QuintEx> "==" <rhs:QuintEx> => {
+        make_quint_app(helper.get_id(), "eq", vec![lhs, rhs])
     },
 
-    <lhs:QuintEx> "<" <rhs:QuintEx> => {
-        QuintEx::QuintApp{
-          id: helper.get_id(), 
-          opcode: "ilt".into(), 
-          args: vec![lhs, rhs]
-        }
+    <lhs:QuintEx> "and" <rhs:QuintEx> => {
+        make_quint_app(helper.get_id(), "and", vec![lhs, rhs])
+    },
+    <lhs:QuintEx> "or" <rhs:QuintEx> => {
+        make_quint_app(helper.get_id(), "or", vec![lhs, rhs])
+    },
+
+    <lhs:QuintEx> "implies" <rhs:QuintEx> => {
+        make_quint_app(helper.get_id(), "implies", vec![lhs, rhs])
     },
 
 

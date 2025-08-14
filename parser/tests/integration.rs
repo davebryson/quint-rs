@@ -28,11 +28,28 @@ fn basic_integration() {
     check_expr!("2^2 + 1", 5i64, i64);
     check_expr!("(1+(2*3))", 7i64, i64);
     check_expr!("10 / 5 * 2", 4i64, i64);
+    check_expr!("10 % 2", 0i64, i64);
+    check_expr!("11 % 2", 1i64, i64);
 
     check_expr!("true", true, bool);
     check_expr!("false", false, bool);
     check_expr!("5 > 2", true, bool);
     check_expr!("2 < 5", true, bool);
+    check_expr!("2 <= 2", true, bool);
+    check_expr!("2 == 2", true, bool);
+    check_expr!("2 != 3", true, bool);
+    check_expr!("2 > 3", false, bool);
+
+    check_expr!("true and true", true, bool);
+    check_expr!("true and false", false, bool);
+    check_expr!("false and false", false, bool);
+
+    check_expr!("true or false", true, bool);
+    check_expr!("true or true", true, bool);
+    check_expr!("false or false", false, bool);
+
+    check_expr!("true implies true", true, bool);
+    check_expr!("true implies false", false, bool);
 
     check_expr!("\"hello\"", "hello", &str);
 }
