@@ -4,22 +4,25 @@ use crate::lexer::{Token, LexicalError};
 
 grammar(helper: &mut QuintIdGenerator);
 
+// Change entry to pub Quint:
 
-QuintDeclaration: QuintDeclaration = {
-  "var" <name:"identifier"> ":" "int" => {
-    QuintDeclaration::QuintVar(
-      QuintVar{
-        id: helper.get_id(), 
-        name: name.into(), 
-        imported_from: None, 
-        namespaces: None
-      }
-    )
-  }
+
+Expression: QuintEx = {
+    #[precedence(level="0")]
+    ExpTerm,
+    #[precedence(level="1")]
+    ExprPrec1,
+
+
 }
 
+// level 1
+ExprPrec1: QuintEx = {}
+// level 2
+ExprPrec2: QuintEx = {}
 
-// TODO: refactor for precedence...
+
+// TODO: refactor
 pub QuintEx: QuintEx = {
     #[precedence(level="0")]
     ExpTerm,
@@ -90,12 +93,13 @@ pub QuintEx: QuintEx = {
     },
 
     // list
-    "[" <args:Comma<QuintEx>> "]" => {
+    "[" <args:Comma<QuintEx>> ","? "]" => {
         make_quint_app(helper.get_id(), "List", args)
     },
 }
 
 
+// change to Term
 ExpTerm: QuintEx = {
   <value:"int"> => {
     QuintEx::QuintInt{id: helper.get_id(), value}
