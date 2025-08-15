@@ -19,7 +19,7 @@ QuintDeclaration: QuintDeclaration = {
 }
 
 
-// TODO: check precedence (not complete yet)
+// TODO: refactor for precedence...
 pub QuintEx: QuintEx = {
     #[precedence(level="0")]
     ExpTerm,
@@ -84,8 +84,17 @@ pub QuintEx: QuintEx = {
         make_quint_app(helper.get_id(), "implies", vec![lhs, rhs])
     },
 
+    // if then else
+    "if" <c:ExpTerm> <a:QuintEx> "else" <b:QuintEx> => {
+        make_quint_app(helper.get_id(), "ite", vec![c, a, b])
+    },
 
+    // list
+    "[" <args:Comma<QuintEx>> "]" => {
+        make_quint_app(helper.get_id(), "List", args)
+    },
 }
+
 
 ExpTerm: QuintEx = {
   <value:"int"> => {
@@ -100,8 +109,31 @@ ExpTerm: QuintEx = {
   <name:"identifier"> => {
     QuintEx::QuintName{id: helper.get_id(), name: name.into()}
   },
-   "(" <e:QuintEx> ")" => e
+   "(" <e:QuintEx> ")" => e,
+   "{" <e:QuintEx> "}" => e,
 }
+
+// macros for handling arguments: (1,2,), etc..
+Comma<T>: Vec<T> = {
+    => Vec::new(),
+    CommaOne<T> => <>,
+};
+
+CommaOne<T>: Vec<T> = {
+    <e:T> <v:("," <T>)*> => {
+        let mut v = v;
+        v.insert(0, e);
+        v
+    }
+};
+
+CommaTwo<T>: Vec<T> = {
+    <e:T> <v:("," <T>)+> => {
+        let mut v = v;
+        v.insert(0, e);
+        v
+    }
+};
 
 // Lexer
 extern {
