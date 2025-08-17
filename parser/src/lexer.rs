@@ -230,6 +230,19 @@ pub enum Token {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use Token::*;
+
+    macro_rules! check_lexing {
+        ($expr:expr, $expected:expr) => {{
+            let lexer = QuintLexer::new($expr);
+            let r = lexer
+                .into_iter()
+                .filter(|t| t.is_ok())
+                .map(|v| v.unwrap().1)
+                .collect::<Vec<_>>();
+            assert_eq!($expected, r);
+        }};
+    }
 
     #[test]
     fn no_errors_on_module() {
@@ -248,6 +261,46 @@ mod tests {
                 .collect::<Vec<_>>()
                 .len()
                 > 0
+        );
+    }
+
+    #[test]
+    fn token_structure() {
+        check_lexing!("1 + 1", vec![Int(1), Add, Int(1)]);
+        check_lexing!(
+            "module dave {}",
+            vec![Module, LowId("dave".into()), LBrace, RBrace]
+        );
+        check_lexing!(
+            r#"module dave {
+               var state: int;
+               action: init: {
+                  state' = state + 0
+               } 
+            }"#,
+            vec![
+                Module,
+                LowId("dave".into()),
+                LBrace,
+                Var,
+                LowId("state".into()),
+                Colon,
+                TypeInt,
+                SemiColon,
+                Action,
+                Colon,
+                LowId("init".into()),
+                Colon,
+                LBrace,
+                LowId("state".into()),
+                Prime,
+                Assign,
+                LowId("state".into()),
+                Add,
+                Int(0i64),
+                RBrace,
+                RBrace,
+            ]
         );
     }
 }

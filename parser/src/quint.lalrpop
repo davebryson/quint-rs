@@ -1,128 +1,186 @@
-use crate::{QuintEx, QuintDeclaration, QuintVar};
-use crate::utils::{QuintIdGenerator, make_quint_app};
+use crate::{QuintEx, QuintName};
+use crate::utils::QuintIdGenerator;
 use crate::lexer::{Token, LexicalError};
 
-grammar(helper: &mut QuintIdGenerator);
+grammar(id: &mut QuintIdGenerator);
 
 // Change entry to pub Quint:
+// Using tiers, you work from bottom up...
+// reverse of below...
+// 
+// So, Term, would be the last tier called
+// See the Python work...
+// 
+// Focus on Expressions first...
+// Flow (notional): 
+// 1. Set/List
+// 2  Relationships
+// 3  Add/Sub
+// 4  mul/div/..
+// 5  pow
+// 6  dot call
+// 7  term
 
+// BUT *HOW* to the flow happen...?
 
-Expression: QuintEx = {
-    #[precedence(level="0")]
-    ExpTerm,
-    #[precedence(level="1")]
-    ExprPrec1,
-
-
-}
-
-// level 1
-ExprPrec1: QuintEx = {}
-// level 2
-ExprPrec2: QuintEx = {}
-
-
-// TODO: refactor
-pub QuintEx: QuintEx = {
-    #[precedence(level="0")]
-    ExpTerm,
-
-
-    #[assoc(side="right")]
-    #[precedence(level="1")]
-    <lhs:QuintEx> "^" <rhs:QuintEx> => {
-        make_quint_app(helper.get_id(), "ipow", vec![lhs, rhs])
-    },
-
-    // operators
-    #[assoc(side="left")]
-    #[precedence(level="3")]
-    <lhs:QuintEx> "*" <rhs:QuintEx> => {
-        make_quint_app(helper.get_id(), "imul", vec![lhs, rhs])
-    },
-    <lhs:QuintEx> "/" <rhs:QuintEx> => {
-        make_quint_app(helper.get_id(), "idiv", vec![lhs, rhs])
-    },
-    <lhs:QuintEx> "%" <rhs:QuintEx> => {
-        make_quint_app(helper.get_id(), "imod", vec![lhs, rhs])
-    },
-
-    #[assoc(side="left")]
-    #[precedence(level="4")]
-    <lhs:QuintEx> "+" <rhs:QuintEx> => {
-        make_quint_app(helper.get_id(), "iadd", vec![lhs, rhs])
-    },
-    <lhs:QuintEx> "-" <rhs:QuintEx> => {
-        make_quint_app(helper.get_id(), "isub", vec![lhs, rhs])
-    },
-
-    // relations
-    <lhs:QuintEx> ">" <rhs:QuintEx> => {
-        make_quint_app(helper.get_id(), "igt", vec![lhs, rhs])
-    },
-    <lhs:QuintEx> ">=" <rhs:QuintEx> => {
-        make_quint_app(helper.get_id(), "igte", vec![lhs, rhs])
-    },
-    <lhs:QuintEx> "<" <rhs:QuintEx> => {
-        make_quint_app(helper.get_id(), "ilt", vec![lhs, rhs])
-    },
-    <lhs:QuintEx> "<=" <rhs:QuintEx> => {
-        make_quint_app(helper.get_id(), "ilte", vec![lhs, rhs])
-    },
-    <lhs:QuintEx> "!=" <rhs:QuintEx> => {
-        make_quint_app(helper.get_id(), "neq", vec![lhs, rhs])
-    },
-    <lhs:QuintEx> "==" <rhs:QuintEx> => {
-        make_quint_app(helper.get_id(), "eq", vec![lhs, rhs])
-    },
-
-    <lhs:QuintEx> "and" <rhs:QuintEx> => {
-        make_quint_app(helper.get_id(), "and", vec![lhs, rhs])
-    },
-    <lhs:QuintEx> "or" <rhs:QuintEx> => {
-        make_quint_app(helper.get_id(), "or", vec![lhs, rhs])
-    },
-
-    <lhs:QuintEx> "implies" <rhs:QuintEx> => {
-        make_quint_app(helper.get_id(), "implies", vec![lhs, rhs])
-    },
-
-    // if then else
-    "if" <c:ExpTerm> <a:QuintEx> "else" <b:QuintEx> => {
-        make_quint_app(helper.get_id(), "ite", vec![c, a, b])
-    },
-
-    // list
-    "[" <args:Comma<QuintEx>> ","? "]" => {
-        make_quint_app(helper.get_id(), "List", args)
-    },
+pub Expression: QuintEx = {
+    // Try test Set, then list
+    SetOrList,
 }
 
 
-// change to Term
-ExpTerm: QuintEx = {
-  <value:"int"> => {
-    QuintEx::QuintInt{id: helper.get_id(), value}
-  },
-  <value:"str"> => {
-    QuintEx::QuintStr{id: helper.get_id(), value: value.into()}
-  },
-  <value:"bool"> => {
-    QuintEx::QuintBool{id: helper.get_id(), value}
-  },
-  <name:"identifier"> => {
-    QuintEx::QuintName{id: helper.get_id(), name: name.into()}
-  },
-   "(" <e:QuintEx> ")" => e,
-   "{" <e:QuintEx> "}" => e,
+// *** FOCUS FROM HERE AND BELOW *** //
+// This is the approach to take
+
+
+// [Term, Term,...]
+ListLikePattern: Vec<QuintEx> = {
+     "[" <args:Comma<Term>> "]" => <>
 }
+
+// (Term, Term)
+CallLikePattern: Vec<QuintEx> = {
+    "(" <args:Comma<Term>> ")" => <>
+}
+
+// A list can be: [1,2], or List[1,2]
+ListExp: QuintEx = {
+    LiteralList,
+    "List" <a:LiteralList> => <>,
+    ArithmeticExp,
+}
+
+// [1,2,3]
+LiteralList: QuintEx = {
+    <args:ListLikePattern> => {
+        QuintEx::QuintApp{
+            id:id.get(), 
+            opcode: "List".into(), 
+            args,
+        }
+    },
+}
+
+Set: QuintEx = {
+    "Set" <args:CallLikePattern> => {
+        QuintEx::QuintApp{
+            id:id.get(), 
+            opcode: "Set".into(), 
+            args,
+        }
+    },
+}
+
+// Set(1,2,3)
+SetOrList: QuintEx = {
+    Set,
+    ListExp,
+}
+
+//** Precedence built in the flow... **//
+ArithmeticExp: QuintEx = {
+    <lhs:ArithmeticExp> "+" <rhs:MulDivModExp> => {
+        QuintEx::QuintApp{
+            id:id.get(), 
+            opcode: "iadd".into(), 
+            args: vec![<>],
+        }
+    },
+    <lhs:ArithmeticExp> "-" <rhs:MulDivModExp> => {
+        QuintEx::QuintApp{
+            id:id.get(), 
+            opcode: "isub".into(), 
+            args: vec![<>],
+        }
+    },
+    MulDivModExp,
+}
+
+MulDivModExp: QuintEx = {
+    <lhs:MulDivModExp> "*" <rhs:Term> => {
+        QuintEx::QuintApp{
+            id:id.get(), 
+            opcode: "imul".into(), 
+            args: vec![<>],
+        }
+    },
+    <lhs:MulDivModExp> "/" <rhs:Term> => {
+        QuintEx::QuintApp{
+            id:id.get(), 
+            opcode: "idiv".into(), 
+            args: vec![<>],
+        }
+    },
+    <lhs:MulDivModExp> "%" <rhs:Term> => {
+        QuintEx::QuintApp{
+            id:id.get(), 
+            opcode: "imod".into(), 
+            args: vec![<>],
+        }
+    },
+    PowExp,
+}
+
+// Note: right associative
+PowExp: QuintEx = {
+    <lhs:MulDivModExp> "^" <rhs:Term> => {
+        QuintEx::QuintApp{
+            id:id.get(), 
+            opcode: "ipow".into(), 
+            args:  vec![lhs, rhs],
+        }
+    },
+    DotCall,
+}
+
+// dotCall
+// TODO: Pickup here: should handle more than just 'Set'
+// Can be:
+// [].tail().nth(1)
+DotCall: QuintEx = {
+    <l:Set> "." <opcode: Identifier> "(" <mut arg:Expression*> ")" => {
+        let mut v = vec![l];
+        v.append(&mut arg);
+        QuintEx::QuintApp{
+            id: id.get(), 
+            opcode, 
+            args: v,
+        }
+    },
+    Term,
+}
+
+// Change to Atom?
+Term: QuintEx = {
+    Number, 
+    Str,
+    Boolean,
+    "(" <e:Expression> ")" => e,
+    "{" <e:Expression> "}" => e,
+}
+
+Number: QuintEx = {
+    <value:Int> => QuintEx::QuintInt{id: id.get(), value}
+}
+Str: QuintEx = {
+    <value:String> => QuintEx::QuintStr{id: id.get(), value: value.into()}
+}
+Boolean: QuintEx = {
+    <value:Bool> => QuintEx::QuintBool{id: id.get(), value}
+}
+Identifier: QuintName = {
+    <name:LowId> => name.into(),
+    <name:CapId> => name.into(),
+}
+
+
 
 // macros for handling arguments: (1,2,), etc..
+#[inline]
 Comma<T>: Vec<T> = {
     => Vec::new(),
     CommaOne<T> => <>,
 };
-
 CommaOne<T>: Vec<T> = {
     <e:T> <v:("," <T>)*> => {
         let mut v = v;
@@ -130,7 +188,6 @@ CommaOne<T>: Vec<T> = {
         v
     }
 };
-
 CommaTwo<T>: Vec<T> = {
     <e:T> <v:("," <T>)+> => {
         let mut v = v;
@@ -139,18 +196,18 @@ CommaTwo<T>: Vec<T> = {
     }
 };
 
+
 // Lexer
 extern {
   type Location = usize;
   type Error = LexicalError;
 
   enum Token {
-    "int" => Token::Int(<i64>),
-    "str" => Token::String(<String>),
-    "bool" => Token::Bool(<bool>),
-
-    "identifier" => Token::LowId(<String>),
-    "cap_id" => Token::CapId(<String>),
+    Int => Token::Int(<i64>),
+    Bool => Token::Bool(<bool>),
+    CapId => Token::CapId(<String>),
+    LowId => Token::LowId(<String>),
+    String => Token::String(<String>),
 
     "+" => Token::Add,
     "-" => Token::Sub,
@@ -215,10 +272,13 @@ extern {
     "import" => Token::Import,
     "export" => Token::Export,
 
-    "from" => Token::From,
     "as" => Token::As,
+    "from" => Token::From,
 
     "type" => Token::Type,
+    "str" => Token::TypeStr,
+    "int" => Token::TypeInt,
+    "bool" => Token::TypeBool,
 
     "/*" => Token::Comment,
   }

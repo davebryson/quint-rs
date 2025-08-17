@@ -11,7 +11,7 @@ use lalrpop_util::{ParseError, lalrpop_mod};
 
 lalrpop_mod!(pub quint);
 
-use crate::quint::QuintExParser;
+use crate::quint::ExpressionParser;
 use eyre::Result;
 use lexer::{LexicalError, QuintLexer, Token};
 use utils::QuintIdGenerator;
@@ -19,7 +19,7 @@ use utils::QuintIdGenerator;
 pub fn parse_quint_expr(content: &str) -> Result<QuintEx, ParseError<usize, Token, LexicalError>> {
     let mut generator = QuintIdGenerator::default();
     let lexer = QuintLexer::new(content);
-    let parser = QuintExParser::new();
+    let parser = ExpressionParser::new();
     parser.parse(&mut generator, lexer)
 }
 

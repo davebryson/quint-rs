@@ -17,7 +17,7 @@ pub struct QuintIdGenerator {
 
 impl QuintIdGenerator {
     /// Get the next Quint id
-    pub fn get_id(&mut self) -> QuintId {
+    pub fn get(&mut self) -> QuintId {
         self.next().unwrap()
     }
 }

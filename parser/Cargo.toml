@@ -11,6 +11,5 @@ logos = "0.15.1"
 lalrpop-util = { version = "0.22.2", features = ["unicode"] }
 quint_evaluator = { path = "../evaluator" }
 
-
 [build-dependencies]
 lalrpop = "0.22.2"
