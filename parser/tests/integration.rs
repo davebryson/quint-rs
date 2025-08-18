@@ -159,5 +159,14 @@ fn lists() {
     check_expr!("List(2,3,4)[2]", 4i64, i64);
 
     assert!(with_value("Set(1,2,3).union(Set(4))").is_ok());
-    assert!(with_value("Set(Set(1))").is_ok())
+    assert!(with_value("Set(Set(1))").is_ok());
+
+    check_expr!("true or false", true, bool);
+    check_expr!("true and false", false, bool);
+    check_expr!("true iff true", true, bool);
+
+    check_expr!("all { true, false }", false, bool);
+    check_expr!("any { true, false }", true, bool);
+
+    check_expr!("and { true, true }", true, bool);
 }

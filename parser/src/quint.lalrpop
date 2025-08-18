@@ -25,7 +25,8 @@ grammar(id: &mut QuintIdGenerator);
 pub Expression: QuintEx = {
     // Actually start with IF branch
     //ArithmeticExp,
-    RelationshipExp,
+    //RelationshipExp,
+    AndOrExp,
 }
 
 
@@ -34,26 +35,50 @@ pub Expression: QuintEx = {
 
 
 
-// x OR x 
-// or {}
-// x AND x
-// and {}
+// 
 AndOrOps: QuintName = {
     "and" => "and".into(),
     "or" => "or".into(),
     "implies" => "implies".into(),
+    "iff" => "iff".into()
 }
 AndOrExp: QuintEx = {
-    <lhs:AndOrExp> <opcode: AndOrOps> <rhs:RelationshipExp> => {
+    <lhs:Expression> <opcode: AndOrOps> <rhs:RelationshipExp> => {
         QuintEx::QuintApp{
             id:id.get(), 
-            opcode, 
+            opcode,
             args: vec![lhs, rhs],
         }
     },
-    //PrimeExp,
+    "and" "{" <args:CommaOne<RelationshipExp>> "}" => {
+        QuintEx::QuintApp{
+            id:id.get(), 
+            opcode: "and".into(), 
+            args,
+        }
+    },
+    "or" "{" <args:CommaOne<RelationshipExp>> "}" => {
+        QuintEx::QuintApp{
+            id:id.get(), 
+            opcode: "or".into(), 
+            args,
+        }
+    },
+    "all" "{" <args:CommaOne<RelationshipExp>> "}" => {
+        QuintEx::QuintApp{
+            id:id.get(), 
+            opcode: "actionAll".into(), 
+            args,
+        }
+    },
+    "any" "{" <args:CommaOne<RelationshipExp>> "}" => {
+        QuintEx::QuintApp{
+            id:id.get(), 
+            opcode: "actionAny".into(), 
+            args,
+        }
+    },
     RelationshipExp,
-
 }
 
 // Prime Assignment
@@ -173,6 +198,7 @@ DotCall: QuintEx = {
     },
 
     // Literal list: [1,2,3]
+    // TODO: Can this be moved up??
     "[" <args:Comma<Term>> "]" => {
         QuintEx::QuintApp{
             id:id.get(), 
