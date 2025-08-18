@@ -12,6 +12,24 @@ grammar(id: &mut QuintIdGenerator);
 // 
 
 pub Expression: QuintEx = {
+    // need to refactor out the few below
+    <lhs: Term> "->" <rhs:Term> => {
+        QuintEx::QuintApp{
+            id:id.get(), 
+            opcode: "Tup".into(),
+            args: vec![lhs,rhs]
+        }
+    },
+    // TODO: Record - handle many
+    // translate lhs, rhs to list? [key1, value1, key2, value2...]
+    // See: https://github.com/informalsystems/quint/blob/main/evaluator/src/builtins.rs#L277
+    //"{" <lhs:Identifier> ":" <rhs:AndOrExp> "}" => {
+    //    QuintEx::QuintApp{
+    //        id:id.get(), 
+    //        opcode: "Rec".into(),
+    //        args: vec![lhs,rhs],
+    //    }
+    //},
     IfThenExp,
 }
 
@@ -189,7 +207,6 @@ DotCall: QuintEx = {
     },
 
     // Literal list: [1,2,3]
-    // TODO: Can this be moved up??
     "[" <args:Comma<Term>> "]" => {
         QuintEx::QuintApp{
             id:id.get(), 
@@ -207,6 +224,20 @@ Term: QuintEx = {
     Boolean,
     "(" <e:Expression> ")" => e,
     "{" <e:Expression> "}" => e,
+    "("")" => {
+        QuintEx::QuintApp{
+            id:id.get(), 
+            opcode: "Tup".into(),
+            args: vec![]
+        }
+    },
+    "(" <args: CommaTwo<Expression>> ")" => {
+        QuintEx::QuintApp{
+            id:id.get(), 
+            opcode: "Tup".into(),
+            args,
+        }
+    },
 }
 
 CallName: QuintName = {
@@ -250,6 +281,15 @@ CommaTwo<T>: Vec<T> = {
         v
     }
 };
+
+// KeyValue pairs
+//KeyValues<T>: Vec<T> = {
+//    <e:T> ":" <v:<T>> => {
+//        let mut v = v;
+//        v.insert(0, e);
+//        v
+//    }
+//}
 
 // Lexer mapping
 extern {

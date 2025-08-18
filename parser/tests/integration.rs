@@ -88,4 +88,13 @@ fn basic_integration() {
 
     check_expr!("not(false)", true, bool);
     check_expr!("not((5>2))", false, bool);
+
+    // Tuples
+    assert!(with_value("()").is_ok());
+    assert!(with_value("(1,2)").is_ok());
+    assert!(with_value("(1,2,3,4,5)").is_ok());
+
+    assert!(with_value("5 -> 10").is_ok());
+
+    assert!(with_value("{a: 10}").is_ok());
 }
