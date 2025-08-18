@@ -9,33 +9,23 @@ grammar(id: &mut QuintIdGenerator);
 // reverse of below...
 // 
 // So, Term, would be the last tier called
-// See the Python work...
 // 
-// Focus on Expressions first...
-// Flow (notional): 
-// 1. Set/List
-// 2  Relationships
-// 3  Add/Sub
-// 4  mul/div/..
-// 5  pow
-// 6  dot call
-// 7  term
-
 
 pub Expression: QuintEx = {
-    // Actually start with IF branch
-    //ArithmeticExp,
-    //RelationshipExp,
+    IfThenExp,
+}
+
+IfThenExp: QuintEx = {
+    "if" <a:AndOrExp> <b:Term> "else" <c:Term> => {
+        QuintEx::QuintApp{
+            id:id.get(), 
+            opcode: "ite".into(),
+            args: vec![a,b,c],
+        }
+    },
     AndOrExp,
 }
 
-
-// *** FOCUS FROM HERE AND BELOW *** //
-// This is the approach to take
-
-
-
-// 
 AndOrOps: QuintName = {
     "and" => "and".into(),
     "or" => "or".into(),
@@ -83,7 +73,7 @@ AndOrExp: QuintEx = {
 
 // Prime Assignment
 // TODO: this will have an opcode of 'assign' and 2 args. 
-// But not sure how this is related to the var that must be declared
+// But not sure how this is related to the var that must be declared - 
 // and this happens in an action
 //PrimeExp: QuintEx = {
 //    <lhs: Identifier> "'" "=" <rhs:RelationshipExp> => {
@@ -116,7 +106,6 @@ RelationshipExp: QuintEx = {
     ArithmeticExp,
 }
 
-
 ArithmeticOps: QuintName = {
     "+" => "iadd".into(),
     "-" => "isub".into(),
@@ -145,13 +134,18 @@ MulDivModExp: QuintEx = {
             args: vec![lhs, rhs],
         }
     },
-    PowExp,
+    PowUnaryExp,
 }
 
-// Unary minus
-
-// Note: right associative
-PowExp: QuintEx = {
+// right associative
+PowUnaryExp: QuintEx = {
+    "-" <rhs:Term> => {
+        QuintEx::QuintApp{
+            id:id.get(), 
+            opcode: "iuminus".into(), 
+            args:  vec![rhs],
+        }
+    },
     <lhs:MulDivModExp> "^" <rhs:Term> => {
         QuintEx::QuintApp{
             id:id.get(), 
@@ -165,7 +159,6 @@ PowExp: QuintEx = {
 // dotCall
 // Can be:
 // [].tail().nth(1)
-// was <n:OperApp> "." <opcode: Identifier> "(" <mut arg:Expression*> ")"
 DotCall: QuintEx = {
     <n: CallName> "(" <args:Comma<DotCall>> ")" => {
         QuintEx::QuintApp{
@@ -174,8 +167,6 @@ DotCall: QuintEx = {
             args,
         }
     },
-
-    // Was: <mut args:Expression*>
     <n:DotCall> "." <opcode: CallName> "(" <mut args:Comma<DotCall>> ")" => {
         let mut v = vec![n];
         v.append(&mut args);
@@ -185,7 +176,6 @@ DotCall: QuintEx = {
             args: v,
         }
     },
-
     // Access by index:
     // [1,2,3][1]
     // List(1,2,3)[1]
@@ -218,20 +208,16 @@ Term: QuintEx = {
     "{" <e:Expression> "}" => e,
 }
 
-// Add other's 'and', 'or'
 CallName: QuintName = {
-    "and" => "and".into(),
-    "or" => "or".into(),
+    AndOrOps,
     Identifier,
 }
-
 Identifier: QuintName = {
     <name:LowId> => name.into(),
     <name:CapId> => name.into(),
     "Set" => "Set".into(),
     "List" => "List".into(),
 }
-
 Number: QuintEx = {
     <value:Int> => QuintEx::QuintInt{id: id.get(), value}
 }
@@ -263,7 +249,7 @@ CommaTwo<T>: Vec<T> = {
     }
 };
 
-// Lexer
+// Lexer mapping
 extern {
   type Location = usize;
   type Error = LexicalError;

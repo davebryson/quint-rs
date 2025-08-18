@@ -12,9 +12,9 @@ fn print_result(expr: &str) {
 
 fn with_value(expr: &str) -> Result<Value, QuintError> {
     let parsed = parse_quint_expr(expr);
-    println!("----");
-    println!("{:?}", parsed);
-    println!("----");
+    //println!("----");
+    //println!("{:?}", parsed);
+    //println!("----");
     assert!(parsed.is_ok());
     let table = LookupTable::default();
     let val = run(&table, &parsed.unwrap());
@@ -169,4 +169,12 @@ fn lists() {
     check_expr!("any { true, false }", true, bool);
 
     check_expr!("and { true, true }", true, bool);
+
+    check_expr!("-2 * 3", -6i64, i64);
+}
+
+#[test]
+fn ifthen() {
+    check_expr!("if (false) 0 else 10", 10i64, i64);
+    check_expr!("if (10 > 5) 1 else 0", 1i64, i64);
 }
