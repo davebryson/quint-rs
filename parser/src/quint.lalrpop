@@ -21,11 +21,10 @@ grammar(id: &mut QuintIdGenerator);
 // 6  dot call
 // 7  term
 
-// BUT *HOW* to the flow happen...?
 
 pub Expression: QuintEx = {
-    // Try test Set, then list
-    SetOrList,
+    // Actually start with IF branch
+    ArithmeticExp,
 }
 
 
@@ -33,12 +32,13 @@ pub Expression: QuintEx = {
 // This is the approach to take
 
 
-// [Term, Term,...]
+// Zero or more [] or [Term, Term,...]
 ListLikePattern: Vec<QuintEx> = {
      "[" <args:Comma<Term>> "]" => <>
 }
 
-// (Term, Term)
+// Zero or more (), (Term, Term)
+// was: <args:Comma<Term>>
 CallLikePattern: Vec<QuintEx> = {
     "(" <args:Comma<Term>> ")" => <>
 }
@@ -46,7 +46,6 @@ CallLikePattern: Vec<QuintEx> = {
 // A list can be: [1,2], or List[1,2]
 ListExp: QuintEx = {
     LiteralList,
-    "List" <a:LiteralList> => <>,
     ArithmeticExp,
 }
 
@@ -61,21 +60,6 @@ LiteralList: QuintEx = {
     },
 }
 
-Set: QuintEx = {
-    "Set" <args:CallLikePattern> => {
-        QuintEx::QuintApp{
-            id:id.get(), 
-            opcode: "Set".into(), 
-            args,
-        }
-    },
-}
-
-// Set(1,2,3)
-SetOrList: QuintEx = {
-    Set,
-    ListExp,
-}
 
 //** Precedence built in the flow... **//
 ArithmeticExp: QuintEx = {
@@ -133,18 +117,49 @@ PowExp: QuintEx = {
     DotCall,
 }
 
+
+
 // dotCall
-// TODO: Pickup here: should handle more than just 'Set'
 // Can be:
 // [].tail().nth(1)
+// was <n:OperApp> "." <opcode: Identifier> "(" <mut arg:Expression*> ")"
 DotCall: QuintEx = {
-    <l:Set> "." <opcode: Identifier> "(" <mut arg:Expression*> ")" => {
-        let mut v = vec![l];
-        v.append(&mut arg);
+    <n: NormalCallNameOrAfterDot> "(" <args:Comma<DotCall>> ")" => {
+        QuintEx::QuintApp{
+            id:id.get(), 
+            opcode: n, 
+            args,
+        }
+    },
+
+    // Was: <mut args:Expression*>
+    <n:DotCall> "." <opcode: NormalCallNameOrAfterDot> "(" <mut args:Comma<DotCall>> ")" => {
+        let mut v = vec![n];
+        v.append(&mut args);
         QuintEx::QuintApp{
             id: id.get(), 
             opcode, 
             args: v,
+        }
+    },
+
+    // Access by index:
+    // [1,2,3][1]
+    // List(1,2,3)[1]
+    <n:DotCall> "[" <idx: Number> "]" => {
+        QuintEx::QuintApp{
+            id: id.get(), 
+            opcode: "nth".into(), 
+            args: vec![n, idx],
+        }
+    },
+
+    // Literal list: [1,2,3]
+    <args:ListLikePattern> => {
+        QuintEx::QuintApp{
+            id:id.get(), 
+            opcode: "List".into(), 
+            args,
         }
     },
     Term,
@@ -159,6 +174,20 @@ Term: QuintEx = {
     "{" <e:Expression> "}" => e,
 }
 
+// Add other's 'and', 'or'
+NormalCallNameOrAfterDot: QuintName = {
+    "and" => "and".into(),
+    "or" => "or".into(),
+    Identifier,
+}
+
+Identifier: QuintName = {
+    <name:LowId> => name.into(),
+    <name:CapId> => name.into(),
+    "Set" => "Set".into(),
+    "List" => "List".into(),
+}
+
 Number: QuintEx = {
     <value:Int> => QuintEx::QuintInt{id: id.get(), value}
 }
@@ -168,12 +197,6 @@ Str: QuintEx = {
 Boolean: QuintEx = {
     <value:Bool> => QuintEx::QuintBool{id: id.get(), value}
 }
-Identifier: QuintName = {
-    <name:LowId> => name.into(),
-    <name:CapId> => name.into(),
-}
-
-
 
 // macros for handling arguments: (1,2,), etc..
 #[inline]

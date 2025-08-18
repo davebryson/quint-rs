@@ -24,7 +24,7 @@ fn with_value(expr: &str) -> Result<Value, QuintError> {
 
 fn eval_expr(expr: &str) -> Result<Value, QuintError> {
     let parsed = parse_quint_expr(expr);
-    assert!(parsed.is_ok());
+    //assert!(parsed.is_ok());
     let table = LookupTable::default();
     run(&table, &parsed.unwrap())
 }
@@ -120,7 +120,7 @@ fn literal_list() {
     assert!(l1.cardinality() == 1);
     let l2 = with_value("[1,2,3,4]").unwrap();
     assert!(l2.cardinality() == 4);
-    let l3 = with_value("List[1,2]").unwrap();
+    let l3 = with_value("List(1,2)").unwrap();
     let l4 = with_value("[1,2]").unwrap();
     assert!(l3.cardinality() == 2);
     assert_eq!(l3, l4);
@@ -138,7 +138,26 @@ fn do_set() {
     check_expr!("2^2", 4i64, i64);
     check_expr!("(1+1)^2", 4i64, i64);
 
+    assert!(with_value("Set()").is_ok());
     assert!(with_value("Set(1,2,3)").is_ok());
     assert!(with_value("Set(1,2,3).union(Set(4))").is_ok());
     assert!(with_value("[1,2,3]").is_ok());
+    // NOTE below works, but should also handle: [1,2,3].tail()
+    // See NormalCallName
+    assert!(with_value("List(1,2,3).tail()").is_ok());
+    check_expr!("List(1,2,3).nth(1)", 2i64, i64);
+}
+
+#[test]
+fn lists() {
+    assert!(with_value("[]").is_ok());
+    assert!(with_value("[1,2,3]").is_ok());
+    assert!(with_value("List(4,5,6)").is_ok());
+    assert!(with_value("List(4,5,6).head()").is_ok());
+    assert!(with_value("[4,5,6].head()").is_ok());
+    check_expr!("[1,2,3][1]", 2i64, i64);
+    check_expr!("List(2,3,4)[2]", 4i64, i64);
+
+    assert!(with_value("Set(1,2,3).union(Set(4))").is_ok());
+    assert!(with_value("Set(Set(1))").is_ok())
 }
