@@ -24,7 +24,8 @@ grammar(id: &mut QuintIdGenerator);
 
 pub Expression: QuintEx = {
     // Actually start with IF branch
-    ArithmeticExp,
+    //ArithmeticExp,
+    RelationshipExp,
 }
 
 
@@ -32,78 +33,97 @@ pub Expression: QuintEx = {
 // This is the approach to take
 
 
-// Zero or more [] or [Term, Term,...]
-ListLikePattern: Vec<QuintEx> = {
-     "[" <args:Comma<Term>> "]" => <>
+
+// x OR x 
+// or {}
+// x AND x
+// and {}
+AndOrOps: QuintName = {
+    "and" => "and".into(),
+    "or" => "or".into(),
+    "implies" => "implies".into(),
+}
+AndOrExp: QuintEx = {
+    <lhs:AndOrExp> <opcode: AndOrOps> <rhs:RelationshipExp> => {
+        QuintEx::QuintApp{
+            id:id.get(), 
+            opcode, 
+            args: vec![lhs, rhs],
+        }
+    },
+    //PrimeExp,
+    RelationshipExp,
+
 }
 
-// Zero or more (), (Term, Term)
-// was: <args:Comma<Term>>
-CallLikePattern: Vec<QuintEx> = {
-    "(" <args:Comma<Term>> ")" => <>
-}
+// Prime Assignment
+// TODO: this will have an opcode of 'assign' and 2 args. 
+// But not sure how this is related to the var that must be declared
+// and this happens in an action
+//PrimeExp: QuintEx = {
+//    <lhs: Identifier> "'" "=" <rhs:RelationshipExp> => {
+//        QuintEx::QuintApp{
+//            id:id.get(), 
+//            opcode, 
+//            args: vec![lhs, rhs],
+//        }
+//    },
+//    RelationshipExp,
+//}
 
-// A list can be: [1,2], or List[1,2]
-ListExp: QuintEx = {
-    LiteralList,
+// Relations
+RelationshipOps: QuintName = {
+    ">" => "igt".into(),
+    ">=" => "igte".into(),
+    "<" => "ilt".into(),
+    "<=" => "ilte".into(),
+    "!=" => "neg".into(),
+    "==" => "eq".into(),
+}
+RelationshipExp: QuintEx = {
+    <lhs:RelationshipExp> <opcode: RelationshipOps> <rhs:ArithmeticExp> => {
+        QuintEx::QuintApp{
+            id:id.get(), 
+            opcode, 
+            args: vec![lhs, rhs],
+        }
+    },
     ArithmeticExp,
 }
 
-// [1,2,3]
-LiteralList: QuintEx = {
-    <args:ListLikePattern> => {
-        QuintEx::QuintApp{
-            id:id.get(), 
-            opcode: "List".into(), 
-            args,
-        }
-    },
+
+ArithmeticOps: QuintName = {
+    "+" => "iadd".into(),
+    "-" => "isub".into(),
 }
-
-
-//** Precedence built in the flow... **//
 ArithmeticExp: QuintEx = {
-    <lhs:ArithmeticExp> "+" <rhs:MulDivModExp> => {
+    <lhs:ArithmeticExp> <opcode: ArithmeticOps> <rhs:MulDivModExp> => {
         QuintEx::QuintApp{
             id:id.get(), 
-            opcode: "iadd".into(), 
-            args: vec![<>],
-        }
-    },
-    <lhs:ArithmeticExp> "-" <rhs:MulDivModExp> => {
-        QuintEx::QuintApp{
-            id:id.get(), 
-            opcode: "isub".into(), 
-            args: vec![<>],
+            opcode, 
+            args: vec![lhs, rhs],
         }
     },
     MulDivModExp,
 }
 
+MulDivModOps: QuintName = {
+    "*" => "imul".into(),
+    "/" => "idiv".into(),
+    "%" => "imod".into(),
+}
 MulDivModExp: QuintEx = {
-    <lhs:MulDivModExp> "*" <rhs:Term> => {
+    <lhs:MulDivModExp> <opcode: MulDivModOps> <rhs:Term> => {
         QuintEx::QuintApp{
             id:id.get(), 
-            opcode: "imul".into(), 
-            args: vec![<>],
-        }
-    },
-    <lhs:MulDivModExp> "/" <rhs:Term> => {
-        QuintEx::QuintApp{
-            id:id.get(), 
-            opcode: "idiv".into(), 
-            args: vec![<>],
-        }
-    },
-    <lhs:MulDivModExp> "%" <rhs:Term> => {
-        QuintEx::QuintApp{
-            id:id.get(), 
-            opcode: "imod".into(), 
-            args: vec![<>],
+            opcode, 
+            args: vec![lhs, rhs],
         }
     },
     PowExp,
 }
+
+// Unary minus
 
 // Note: right associative
 PowExp: QuintEx = {
@@ -117,14 +137,12 @@ PowExp: QuintEx = {
     DotCall,
 }
 
-
-
 // dotCall
 // Can be:
 // [].tail().nth(1)
 // was <n:OperApp> "." <opcode: Identifier> "(" <mut arg:Expression*> ")"
 DotCall: QuintEx = {
-    <n: NormalCallNameOrAfterDot> "(" <args:Comma<DotCall>> ")" => {
+    <n: CallName> "(" <args:Comma<DotCall>> ")" => {
         QuintEx::QuintApp{
             id:id.get(), 
             opcode: n, 
@@ -133,7 +151,7 @@ DotCall: QuintEx = {
     },
 
     // Was: <mut args:Expression*>
-    <n:DotCall> "." <opcode: NormalCallNameOrAfterDot> "(" <mut args:Comma<DotCall>> ")" => {
+    <n:DotCall> "." <opcode: CallName> "(" <mut args:Comma<DotCall>> ")" => {
         let mut v = vec![n];
         v.append(&mut args);
         QuintEx::QuintApp{
@@ -155,7 +173,7 @@ DotCall: QuintEx = {
     },
 
     // Literal list: [1,2,3]
-    <args:ListLikePattern> => {
+    "[" <args:Comma<Term>> "]" => {
         QuintEx::QuintApp{
             id:id.get(), 
             opcode: "List".into(), 
@@ -175,7 +193,7 @@ Term: QuintEx = {
 }
 
 // Add other's 'and', 'or'
-NormalCallNameOrAfterDot: QuintName = {
+CallName: QuintName = {
     "and" => "and".into(),
     "or" => "or".into(),
     Identifier,
@@ -218,7 +236,6 @@ CommaTwo<T>: Vec<T> = {
         v
     }
 };
-
 
 // Lexer
 extern {
