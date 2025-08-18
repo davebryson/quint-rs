@@ -85,4 +85,7 @@ fn basic_integration() {
     check_expr!("List(1,2,3).nth(1)", 2i64, i64);
     check_expr!("[1,2,3][1]", 2i64, i64);
     assert!(with_value("1.to(10)").unwrap().cardinality() == 10);
+
+    check_expr!("not(false)", true, bool);
+    check_expr!("not((5>2))", false, bool);
 }

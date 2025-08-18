@@ -212,6 +212,7 @@ Term: QuintEx = {
 CallName: QuintName = {
     AndOrOps,
     Identifier,
+    //"not" => "not".into(),
 }
 Identifier: QuintName = {
     <name:LowId> => name.into(),
