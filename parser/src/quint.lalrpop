@@ -20,17 +20,31 @@ pub Expression: QuintEx = {
             args: vec![lhs,rhs]
         }
     },
-    // TODO: Record - handle many
-    // translate lhs, rhs to list? [key1, value1, key2, value2...]
-    // See: https://github.com/informalsystems/quint/blob/main/evaluator/src/builtins.rs#L277
-    //"{" <lhs:Identifier> ":" <rhs:AndOrExp> "}" => {
-    //    QuintEx::QuintApp{
-    //        id:id.get(), 
-    //        opcode: "Rec".into(),
-    //        args: vec![lhs,rhs],
-    //    }
-    //},
+    Tuple,
+    //Record,
     IfThenExp,
+}
+
+// Format: {a: 1, b: 2}
+
+KeyValue: Vec<QuintEx> = {
+    <lhs:Identifier> ":" <rhs:Expression> ","? => {
+        let mut v = Vec::new();
+        let k = QuintEx::QuintStr{id: id.get(), value: lhs};
+        v.push(k);
+        v.push(rhs);
+        v
+    },
+}
+
+Record: QuintEx = {
+    "{" <a:KeyValue> "}" => {
+        QuintEx::QuintApp {
+            id:id.get(), 
+            opcode: "Rec".into(),
+            args: a,
+        }
+    },
 }
 
 // *** Expressions *** // 
@@ -186,6 +200,7 @@ DotCall: QuintEx = {
             args,
         }
     },
+
     <n:DotCall> "." <opcode: CallName> "(" <mut args:Comma<DotCall>> ")" => {
         let mut v = vec![n];
         v.append(&mut args);
@@ -195,6 +210,7 @@ DotCall: QuintEx = {
             args: v,
         }
     },
+
     // Access by index:
     // [1,2,3][1]
     // List(1,2,3)[1]
@@ -205,15 +221,7 @@ DotCall: QuintEx = {
             args: vec![n, idx],
         }
     },
-
-    // Literal list: [1,2,3]
-    "[" <args:Comma<Term>> "]" => {
-        QuintEx::QuintApp{
-            id:id.get(), 
-            opcode: "List".into(), 
-            args,
-        }
-    },
+    LiteralList,
     Term,
 }
 
@@ -231,10 +239,42 @@ Term: QuintEx = {
             args: vec![]
         }
     },
+    
+}
+
+TupleItem: QuintEx = {
+    "." "_" <value: Number> => <>
+}
+
+Tuple: QuintEx = {
     "(" <args: CommaTwo<Expression>> ")" => {
         QuintEx::QuintApp{
             id:id.get(), 
             opcode: "Tup".into(),
+            args,
+        }
+    },
+    // With item
+    "(" <args: CommaTwo<Expression>> ")" <idx: TupleItem> => {
+        //args.push(idx);
+        let a = QuintEx::QuintApp{
+            id:id.get(), 
+            opcode: "Tup".into(),
+            args,
+        };
+        QuintEx::QuintApp{
+            id:id.get(), 
+            opcode: "item".into(),
+            args: vec![a, idx]
+        }
+    },
+}
+
+LiteralList: QuintEx = {
+    "[" <args:Comma<Term>> "]" => {
+        QuintEx::QuintApp{
+            id:id.get(), 
+            opcode: "List".into(), 
             args,
         }
     },
@@ -243,8 +283,8 @@ Term: QuintEx = {
 CallName: QuintName = {
     AndOrOps,
     Identifier,
-    //"not" => "not".into(),
 }
+
 Identifier: QuintName = {
     <name:LowId> => name.into(),
     <name:CapId> => name.into(),
@@ -282,14 +322,6 @@ CommaTwo<T>: Vec<T> = {
     }
 };
 
-// KeyValue pairs
-//KeyValues<T>: Vec<T> = {
-//    <e:T> ":" <v:<T>> => {
-//        let mut v = v;
-//        v.insert(0, e);
-//        v
-//    }
-//}
 
 // Lexer mapping
 extern {

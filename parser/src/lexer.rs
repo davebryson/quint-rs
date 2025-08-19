@@ -73,14 +73,16 @@ pub enum Token {
     String(String),
 
     // missing support for '_' and hex values (see parse_int)
-    #[regex(r"[0-9]*", |lex| lex.slice().parse::<i64>())]
+    // '_' do not seem to work well with non-greedy regex...
+    // was r"[0-9]*"
+    #[regex(r"[0-9]([0-9]|'_'[0-9])*", |lex| lex.slice().parse::<i64>())]
     Int(i64),
 
-    // 2 different formats for identifiers.  We give lowid a higher priority to
-    // disambiguate.  Create an 'identifier' rule in lalrpop to handle both cases
-    #[regex(r"([a-z][a-zA-Z0-9_]*|[_][a-zA-Z0-9_]+)", |lex| lex.slice().parse::<String>().ok(), priority=0)]
+    // Note: remove Int AFTER the '_'  This caused confusion with the tuple
+    // operatoe '()._1' as the _1 gets picked up as an identifier vs an int
+    #[regex(r"([a-z][a-zA-Z0-9_]*|[_][a-zA-Z_]+)", |lex| lex.slice().parse::<String>().ok(), priority=0)]
     LowId(String),
-    #[regex(r"([A-Z][a-zA-Z0-9_]*|[_][a-zA-Z0-9_]+)", |lex| lex.slice().parse::<String>().ok())]
+    #[regex(r"([A-Z][a-zA-Z0-9_]*|[_][a-zA-Z_]+)", |lex| lex.slice().parse::<String>().ok())]
     CapId(String),
 
     // Operators

@@ -94,7 +94,15 @@ fn basic_integration() {
     assert!(with_value("(1,2)").is_ok());
     assert!(with_value("(1,2,3,4,5)").is_ok());
 
+    check_expr!("(1,2,3)._1", 1i64, i64);
+
     assert!(with_value("5 -> 10").is_ok());
 
-    assert!(with_value("{a: 10}").is_ok());
+    //assert!(with_value("{a: 10}").is_ok());
+}
+
+#[test]
+fn records() {
+    // TODO: here...
+    assert!(with_value("{a: 10, b: 11, c: 12}").is_ok());
 }
