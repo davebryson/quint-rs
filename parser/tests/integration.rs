@@ -104,5 +104,13 @@ fn basic_integration() {
 #[test]
 fn records() {
     // TODO: here...
-    assert!(with_value("{a: 10, b: 11, c: 12}").is_ok());
+    //assert!(with_value("{a: 10, b: 11, c: 12}").is_ok());
+    check_expr!("10_000", 10000i64, i64);
+    check_expr!("0xabcdef", 11259375i64, i64);
+    check_expr!("0xab_cd_ef", 11259375i64, i64);
+    check_expr!("0xAbCdEF", 11259375i64, i64);
+    check_expr!("0xaB_cD_eF", 11259375i64, i64);
+    check_expr!("0", 0i64, i64);
+    check_expr!("100_000_000", 100000000i64, i64);
+    check_expr!("5", 5i64, i64);
 }

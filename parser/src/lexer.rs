@@ -47,6 +47,16 @@ fn remove_quotes(lex: &mut Lexer<Token>) -> String {
     lex.slice().trim_matches(move |c| c == '\"').to_string()
 }
 
+fn num_callback(lex: &mut Lexer<Token>) -> Option<i64> {
+    lex.slice().replace("_", "").parse().ok()
+}
+
+fn hex_callback(lex: &mut Lexer<Token>) -> Option<i64> {
+    let without_underscores = lex.slice().replace("_", "");
+    let without_prefix = without_underscores.trim_start_matches("0x");
+    i64::from_str_radix(without_prefix, 16).ok()
+}
+
 /// Lexer for the Quint Language
 ///
 /// Note: issues with multi-line comments:
@@ -72,11 +82,11 @@ pub enum Token {
     #[regex(r#"(?:"([^"]*)")"#, remove_quotes)]
     String(String),
 
-    // missing support for '_' and hex values (see parse_int)
-    // '_' do not seem to work well with non-greedy regex...
-    // was r"[0-9]*"
-    #[regex(r"[0-9]([0-9]|'_'[0-9])*", |lex| lex.slice().parse::<i64>())]
+    // parse number/hex
+    #[regex(r"\d+[_\d]*", num_callback, priority = 1)]
     Int(i64),
+    #[regex(r"0x[0-9a-fA-F_]+", hex_callback, priority = 1)]
+    Hex(i64),
 
     // Note: remove Int AFTER the '_'  This caused confusion with the tuple
     // operatoe '()._1' as the _1 gets picked up as an identifier vs an int

@@ -292,7 +292,8 @@ Identifier: QuintName = {
     "List" => "List".into(),
 }
 Number: QuintEx = {
-    <value:Int> => QuintEx::QuintInt{id: id.get(), value}
+    <value:Int> => QuintEx::QuintInt{id: id.get(), value},
+    <value:Hex> => QuintEx::QuintInt{id: id.get(), value},
 }
 Str: QuintEx = {
     <value:String> => QuintEx::QuintStr{id: id.get(), value: value.into()}
@@ -330,6 +331,7 @@ extern {
 
   enum Token {
     Int => Token::Int(<i64>),
+    Hex => Token::Hex(<i64>),
     Bool => Token::Bool(<bool>),
     CapId => Token::CapId(<String>),
     LowId => Token::LowId(<String>),
