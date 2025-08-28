@@ -1,3 +1,4 @@
+use std::iter::once;
 use crate::{QuintEx, QuintName};
 use crate::utils::QuintIdGenerator;
 use crate::lexer::{Token, LexicalError};
@@ -21,28 +22,41 @@ pub Expression: QuintEx = {
         }
     },
     Tuple,
-    //Record,
+    Record,
     IfThenExp,
 }
 
 // Format: {a: 1, b: 2}
 
-KeyValue: Vec<QuintEx> = {
+KeyValue: (QuintEx, QuintEx) = {
     <lhs:Identifier> ":" <rhs:Expression> ","? => {
-        let mut v = Vec::new();
-        let k = QuintEx::QuintStr{id: id.get(), value: lhs};
-        v.push(k);
-        v.push(rhs);
-        v
+        (QuintEx::QuintStr{id: id.get(), value: lhs}, rhs)
     },
 }
 
 Record: QuintEx = {
-    "{" <a:KeyValue> "}" => {
+    "{" <a:KeyValue*> "}" => {
         QuintEx::QuintApp {
             id:id.get(), 
             opcode: "Rec".into(),
-            args: a,
+            args: a.iter()
+            .flat_map(|tup| once(tup.0.clone()).chain(once(tup.1.clone())))
+            .collect::<Vec<_>>(),
+        }
+    },
+
+    "{" <a:KeyValue*> "}" "." <b: Identifier> => {
+        let rec = QuintEx::QuintApp {
+            id:id.get(), 
+            opcode: "Rec".into(),
+            args: a.iter()
+            .flat_map(|tup| once(tup.0.clone()).chain(once(tup.1.clone())))
+            .collect::<Vec<_>>(),
+        };
+        QuintEx::QuintApp {
+           id:id.get(), 
+            opcode: "field".into(),
+            args: vec![rec, QuintEx::QuintStr{id: id.get(), value: b}]
         }
     },
 }
@@ -102,18 +116,18 @@ AndOrExp: QuintEx = {
         }
     },
     RelationshipExp,
+    //PrimeExp,
 }
 
 // Prime Assignment
 // TODO: this will have an opcode of 'assign' and 2 args. 
-// But not sure how this is related to the var that must be declared - 
-// and this happens in an action
+// See: line 508 in evaluator.  assumes the lhs was declared earlier
 //PrimeExp: QuintEx = {
 //    <lhs: Identifier> "'" "=" <rhs:RelationshipExp> => {
 //        QuintEx::QuintApp{
 //            id:id.get(), 
-//            opcode, 
-//            args: vec![lhs, rhs],
+//            opcode: "assign".into(), 
+//            args: vec![QuintEx::QuintStr{id: id.get(), value: lhs}, rhs],
 //        }
 //    },
 //    RelationshipExp,
@@ -189,10 +203,22 @@ PowUnaryExp: QuintEx = {
     DotCall,
 }
 
+// Flow should be: DotCall -> OperApp -> List -> Tuple -> Record -> Term/Atom
+
 // dotCall
 // Can be:
 // [].tail().nth(1)
+// {}.a
+// TODO: This needs to be refactored to handle all cases:
+// Set(1)
+// List(1,2)
+// [1,2].head()
+// {..}.fieldNames()
+// {..}.a
+// And it must have a high priority
 DotCall: QuintEx = {
+
+    // TODO: refactor some of this out to branches based on precedence
     <n: CallName> "(" <args:Comma<DotCall>> ")" => {
         QuintEx::QuintApp{
             id:id.get(), 
@@ -201,6 +227,7 @@ DotCall: QuintEx = {
         }
     },
 
+    // TODO: this needs to support optional: (args), e.g. {}.a
     <n:DotCall> "." <opcode: CallName> "(" <mut args:Comma<DotCall>> ")" => {
         let mut v = vec![n];
         v.append(&mut args);
@@ -242,6 +269,7 @@ Term: QuintEx = {
     
 }
 
+// Tuple
 TupleItem: QuintEx = {
     "." "_" <value: Number> => <>
 }
