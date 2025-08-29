@@ -9,24 +9,14 @@ grammar(id: &mut QuintIdGenerator);
 // Using tiers, you work from bottom up...
 // reverse of below...
 // 
-// So, Term, would be the last tier called
 // 
 
 pub Expression: QuintEx = {
-    // need to refactor out the few below
-    <lhs: Term> "->" <rhs:Term> => {
-        QuintEx::QuintApp{
-            id:id.get(), 
-            opcode: "Tup".into(),
-            args: vec![lhs,rhs]
-        }
-    },
+    Pair,
     Tuple,
     Record,
     IfThenExp,
 }
-
-// Format: {a: 1, b: 2}
 
 KeyValue: (QuintEx, QuintEx) = {
     <lhs:Identifier> ":" <rhs:Expression> ","? => {
@@ -63,7 +53,7 @@ Record: QuintEx = {
 
 // *** Expressions *** // 
 IfThenExp: QuintEx = {
-    "if" <a:AndOrExp> <b:Term> "else" <c:Term> => {
+    "if" <a:AndOrExp> <b:AtomExp> "else" <c:AtomExp> => {
         QuintEx::QuintApp{
             id:id.get(), 
             opcode: "ite".into(),
@@ -71,6 +61,17 @@ IfThenExp: QuintEx = {
         }
     },
     AndOrExp,
+}
+
+// Literal List 
+LiteralList: QuintEx = {
+    "[" <args:Comma<AtomExp>> "]" => {
+        QuintEx::QuintApp{
+            id:id.get(), 
+            opcode: "List".into(), 
+            args,
+        }
+    },
 }
 
 AndOrOps: QuintName = {
@@ -174,51 +175,58 @@ MulDivModOps: QuintName = {
     "%" => "imod".into(),
 }
 MulDivModExp: QuintEx = {
-    <lhs:MulDivModExp> <opcode: MulDivModOps> <rhs:Term> => {
+    <lhs:MulDivModExp> <opcode: MulDivModOps> <rhs:AtomExp> => {
         QuintEx::QuintApp{
             id:id.get(), 
             opcode, 
             args: vec![lhs, rhs],
         }
     },
-    PowUnaryExp,
+    UminusExp,
 }
 
-// right associative
-PowUnaryExp: QuintEx = {
-    "-" <rhs:Term> => {
+UminusExp: QuintEx = {
+    "-" <rhs:UminusExp> => {
         QuintEx::QuintApp{
             id:id.get(), 
             opcode: "iuminus".into(), 
             args:  vec![rhs],
         }
     },
-    <lhs:MulDivModExp> "^" <rhs:Term> => {
+    PowExp,
+}
+
+// right associative
+PowExp: QuintEx = {
+    <lhs:AtomExp> "^" <rhs:UminusExp> => {
         QuintEx::QuintApp{
             id:id.get(), 
             opcode: "ipow".into(), 
             args:  vec![lhs, rhs],
         }
     },
-    DotCall,
+    //OperApp,
+    ListAccess,
 }
 
-// Flow should be: DotCall -> OperApp -> List -> Tuple -> Record -> Term/Atom
+// [1,2,3][1], List(1,3)[1]
+ListAccess: QuintEx = {
+    <n:OperApp> "[" <idx: Number> "]" => {
+        QuintEx::QuintApp{
+            id: id.get(), 
+            opcode: "nth".into(), 
+            args: vec![n, idx],
+        }
+    },
+    OperApp,
+}
 
-// dotCall
-// Can be:
-// [].tail().nth(1)
-// {}.a
-// TODO: This needs to be refactored to handle all cases:
-// Set(1)
-// List(1,2)
-// [1,2].head()
-// {..}.fieldNames()
-// {..}.a
-// And it must have a high priority
-DotCall: QuintEx = {
-
-    // TODO: refactor some of this out to branches based on precedence
+CallName: QuintName = {
+    AndOrOps,
+    Identifier,
+}
+// OperApp
+OperApp: QuintEx = {
     <n: CallName> "(" <args:Comma<DotCall>> ")" => {
         QuintEx::QuintApp{
             id:id.get(), 
@@ -226,9 +234,15 @@ DotCall: QuintEx = {
             args,
         }
     },
+    DotCall,
+}
 
+// Lambda
+
+// Dot Call
+DotCall: QuintEx = {
     // TODO: this needs to support optional: (args), e.g. {}.a
-    <n:DotCall> "." <opcode: CallName> "(" <mut args:Comma<DotCall>> ")" => {
+    <n:OperApp> "." <opcode: CallName> "(" <mut args:Comma<OperApp>> ")" => {
         let mut v = vec![n];
         v.append(&mut args);
         QuintEx::QuintApp{
@@ -237,28 +251,18 @@ DotCall: QuintEx = {
             args: v,
         }
     },
-
-    // Access by index:
-    // [1,2,3][1]
-    // List(1,2,3)[1]
-    <n:DotCall> "[" <idx: Number> "]" => {
-        QuintEx::QuintApp{
-            id: id.get(), 
-            opcode: "nth".into(), 
-            args: vec![n, idx],
-        }
-    },
     LiteralList,
-    Term,
+    AtomExp,
 }
 
 // Change to Atom?
-Term: QuintEx = {
+AtomExp: QuintEx = {
     Number, 
     Str,
     Boolean,
     "(" <e:Expression> ")" => e,
     "{" <e:Expression> "}" => e,
+    // Tuple 'uint'
     "("")" => {
         QuintEx::QuintApp{
             id:id.get(), 
@@ -266,7 +270,18 @@ Term: QuintEx = {
             args: vec![]
         }
     },
-    
+}
+
+/** Structures **/
+
+Pair: QuintEx = {
+    <lhs: AtomExp> "->" <rhs:AtomExp> => {
+        QuintEx::QuintApp{
+            id:id.get(), 
+            opcode: "Tup".into(),
+            args: vec![lhs,rhs]
+        }
+    },
 }
 
 // Tuple
@@ -298,27 +313,18 @@ Tuple: QuintEx = {
     },
 }
 
-LiteralList: QuintEx = {
-    "[" <args:Comma<Term>> "]" => {
-        QuintEx::QuintApp{
-            id:id.get(), 
-            opcode: "List".into(), 
-            args,
-        }
-    },
-}
 
-CallName: QuintName = {
-    AndOrOps,
-    Identifier,
-}
-
+/** qualId, etc... */
 Identifier: QuintName = {
     <name:LowId> => name.into(),
     <name:CapId> => name.into(),
     "Set" => "Set".into(),
     "List" => "List".into(),
+    "from" => "from".into(),
+    "as" => "as".into(),
 }
+
+/** Literals **/
 Number: QuintEx = {
     <value:Int> => QuintEx::QuintInt{id: id.get(), value},
     <value:Hex> => QuintEx::QuintInt{id: id.get(), value},
@@ -330,7 +336,7 @@ Boolean: QuintEx = {
     <value:Bool> => QuintEx::QuintBool{id: id.get(), value}
 }
 
-// macros for handling arguments: (1,2,), etc..
+/** Macro for handling arguments: (1,2,), etc.. **/
 #[inline]
 Comma<T>: Vec<T> = {
     => Vec::new(),
@@ -350,7 +356,6 @@ CommaTwo<T>: Vec<T> = {
         v
     }
 };
-
 
 // Lexer mapping
 extern {

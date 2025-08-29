@@ -1,17 +1,15 @@
-use std::rc::Rc;
+//use std::rc::Rc;
 
-use quint_evaluator::{
-    evaluator::{run, Env, EvalResult, Interpreter},
-    helpers,
-    value::Value,
-    ir::LookupTable,
-};
+use quint_evaluator::{evaluator::run, ir::LookupTable};
 
-use quint_parser::{QuintError, parse_quint_expr};
+use quint_parser::parse_quint_expr;
 
 fn assert_from_string(input: &str, expected: &str) -> Result<(), Box<dyn std::error::Error>> {
     let parsed = parse_quint_expr(input);
-    assert!(parsed.is_ok(), "error parsing input: {input}, error: {parsed:?}");
+    assert!(
+        parsed.is_ok(),
+        "error parsing input: {input}, error: {parsed:?}"
+    );
     let value = run(&LookupTable::default(), &parsed.unwrap());
 
     if expected == "undefined" {
@@ -20,7 +18,10 @@ fn assert_from_string(input: &str, expected: &str) -> Result<(), Box<dyn std::er
     }
 
     let parsed_expected = parse_quint_expr(expected);
-    assert!(parsed_expected.is_ok(), "error parsing expected: {expected}, error: {parsed_expected:?}");
+    assert!(
+        parsed_expected.is_ok(),
+        "error parsing expected: {expected}, error: {parsed_expected:?}"
+    );
     let expected_value = run(&LookupTable::default(), &parsed_expected.unwrap());
 
     let value = value.map(|v| v.normalize());
@@ -782,7 +783,7 @@ fn list_select() -> Result<(), Box<dyn std::error::Error>> {
 fn all_lists_up_to() -> Result<(), Box<dyn std::error::Error>> {
     assert_from_string(
         "Set(1, 2, 3).allListsUpTo(2)",
-        "Set(List(), List(1), List(2), List(3), List(1, 1), List(2, 1), List(3, 1), List(1, 2), List(2, 2), List(3, 2), List(1, 3), List(2, 3), List(3, 3))"
+        "Set(List(), List(1), List(2), List(3), List(1, 1), List(2, 1), List(3, 1), List(1, 2), List(2, 2), List(3, 2), List(1, 3), List(2, 3), List(3, 3))",
     )?;
     assert_from_string(
         "Set(1).allListsUpTo(3)",
@@ -928,12 +929,14 @@ fn map_equality() -> Result<(), Box<dyn std::error::Error>> {
 
 #[test]
 fn set_of_maps() -> Result<(), Box<dyn std::error::Error>> {
-    assert_from_string("2.to(3).setOfMaps(5.to(6))",
-        "Set(Map(Tup(2, 5), Tup(3, 5)), Map(Tup(2, 6), Tup(3, 5)), Map(Tup(2, 5), Tup(3, 6)), Map(Tup(2, 6), Tup(3, 6)))"
+    assert_from_string(
+        "2.to(3).setOfMaps(5.to(6))",
+        "Set(Map(Tup(2, 5), Tup(3, 5)), Map(Tup(2, 6), Tup(3, 5)), Map(Tup(2, 5), Tup(3, 6)), Map(Tup(2, 6), Tup(3, 6)))",
     )?;
 
-    assert_from_string("2.to(3).setOfMaps(5.to(6)) == Set(Map(2 -> 5, 3 -> 5), Map(2 -> 6, 3 -> 5), Map(2 -> 5, 3 -> 6), Map(2 -> 6, 3 -> 6))",
-        "true"
+    assert_from_string(
+        "2.to(3).setOfMaps(5.to(6)) == Set(Map(2 -> 5, 3 -> 5), Map(2 -> 6, 3 -> 5), Map(2 -> 5, 3 -> 6), Map(2 -> 6, 3 -> 6))",
+        "true",
     )?;
 
     assert_from_string("Set().setOfMaps(Set(3, 5))", "Set(Map())")?;
