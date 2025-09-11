@@ -11,6 +11,36 @@ grammar(id: &mut QuintIdGenerator);
 // 
 // 
 
+
+// Expressions with proper precedence based on Quint.g4
+// Precedence levels from lowest to highest.
+// 1. Braces/Paren
+// 2. LetIn
+// 3. IfElse
+// 4. List
+// 5. Record
+// 6. Pair
+// 7. Unit e.g. "()"
+// 8. Tuple
+// 9. Literals (int, bool, str) and Identifier
+// 10. actionAny
+// 11. actionAll
+// 12. match
+// 13. implies
+// 14. iff (equivalence)
+// 15. or (disjunction),  or {}
+// 16. and (conjunction), and {}
+// 17. prime assigment
+// 18. relations (==, !=, <, <=, >, >=, ...)
+// 19. addition/subtraction (+, -)
+// 20. multiplication/division/modulo (*, /, %)
+// 21. unary (-)
+// 22. power (^)
+// 23. list index: hello[1]
+// 24. operApp: normalCallname(args?)
+// 25. lambda
+// 26. dotcall: expr . name (args?)?
+
 pub Expression: QuintEx = {
     Pair,
     Tuple,
@@ -232,7 +262,7 @@ OperApp: QuintEx = {
             id:id.get(), 
             opcode: n, 
             args,
-        }
+        } 
     },
     DotCall,
 }
@@ -241,7 +271,7 @@ OperApp: QuintEx = {
 
 // Dot Call
 DotCall: QuintEx = {
-    // TODO: this needs to support optional: (args), e.g. {}.a
+    // TODO: this needs to support optional: (args), e.g. {}.a, {}.fieldNames()
     <n:OperApp> "." <opcode: CallName> "(" <mut args:Comma<OperApp>> ")" => {
         let mut v = vec![n];
         v.append(&mut args);
