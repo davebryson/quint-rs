@@ -5,15 +5,11 @@ use crate::lexer::{Token, LexicalError};
 
 grammar(id: &mut QuintIdGenerator);
 
-// Change entry to pub Quint:
-// Using tiers, you work from bottom up...
-// reverse of below...
-// 
-// 
-
-
 // Expressions with proper precedence based on Quint.g4
-// Precedence levels from lowest to highest.
+// Precedence levels are from lowest to highest, where 1 is the lowest.
+// This flow is different than antlr's format where the highest is the 
+// first in the alternatives.
+// 
 // 1. Braces/Paren
 // 2. LetIn
 // 3. IfElse
@@ -40,78 +36,33 @@ grammar(id: &mut QuintIdGenerator);
 // 24. operApp: normalCallname(args?)
 // 25. lambda
 // 26. dotcall: expr . name (args?)?
-
 pub Expression: QuintEx = {
     Pair,
     Tuple,
     Record,
-    IfThenExp,
+    ConditionalExp,
 }
 
-KeyValue: (QuintEx, QuintEx) = {
-    <lhs:Identifier> ":" <rhs:Expression> ","? => {
-        (QuintEx::QuintStr{id: id.get(), value: lhs}, rhs)
-    },
-}
 
-Record: QuintEx = {
-    "{" <a:KeyValue*> "}" => {
-        QuintEx::QuintApp {
-            id:id.get(), 
-            opcode: "Rec".into(),
-            args: a.iter()
-            .flat_map(|tup| once(tup.0.clone()).chain(once(tup.1.clone())))
-            .collect::<Vec<_>>(),
-        }
-    },
-
-    "{" <a:KeyValue*> "}" "." <b: Identifier> => {
-        let rec = QuintEx::QuintApp {
-            id:id.get(), 
-            opcode: "Rec".into(),
-            args: a.iter()
-            .flat_map(|tup| once(tup.0.clone()).chain(once(tup.1.clone())))
-            .collect::<Vec<_>>(),
-        };
-        QuintEx::QuintApp {
-           id:id.get(), 
-            opcode: "field".into(),
-            args: vec![rec, QuintEx::QuintStr{id: id.get(), value: b}]
-        }
-    },
-}
-
-// *** Expressions *** // 
-IfThenExp: QuintEx = {
-    "if" <a:AndOrExp> <b:AtomExp> "else" <c:AtomExp> => {
+ConditionalExp: QuintEx = {
+    "if" <a:LogicalExp> <b:AtomExp> "else" <c:AtomExp> => {
         QuintEx::QuintApp{
             id:id.get(), 
             opcode: "ite".into(),
             args: vec![a,b,c],
         }
     },
-    AndOrExp,
+    LogicalExp,
 }
 
-// Literal List 
-LiteralList: QuintEx = {
-    "[" <args:Comma<AtomExp>> "]" => {
-        QuintEx::QuintApp{
-            id:id.get(), 
-            opcode: "List".into(), 
-            args,
-        }
-    },
-}
-
-AndOrOps: QuintName = {
+LogicalOps: QuintName = {
     "and" => "and".into(),
     "or" => "or".into(),
     "implies" => "implies".into(),
     "iff" => "iff".into()
 }
-AndOrExp: QuintEx = {
-    <lhs:Expression> <opcode: AndOrOps> <rhs:RelationshipExp> => {
+LogicalExp: QuintEx = {
+    <lhs:Expression> <opcode: LogicalOps> <rhs:RelationshipExp> => {
         QuintEx::QuintApp{
             id:id.get(), 
             opcode,
@@ -241,7 +192,7 @@ PowExp: QuintEx = {
 
 // [1,2,3][1], List(1,3)[1]
 ListAccess: QuintEx = {
-    <n:OperApp> "[" <idx: Number> "]" => {
+    <n:OperApp> "[" <idx: NumberLiteral> "]" => {
         QuintEx::QuintApp{
             id: id.get(), 
             opcode: "nth".into(), 
@@ -252,12 +203,12 @@ ListAccess: QuintEx = {
 }
 
 CallName: QuintName = {
-    AndOrOps,
+    LogicalOps,
     Identifier,
 }
 // OperApp
 OperApp: QuintEx = {
-    <n: CallName> "(" <args:Comma<DotCall>> ")" => {
+    <n: CallName> "(" <args:Comma<Expression>> ")" => {
         QuintEx::QuintApp{
             id:id.get(), 
             opcode: n, 
@@ -271,8 +222,7 @@ OperApp: QuintEx = {
 
 // Dot Call
 DotCall: QuintEx = {
-    // TODO: this needs to support optional: (args), e.g. {}.a, {}.fieldNames()
-    <n:OperApp> "." <opcode: CallName> "(" <mut args:Comma<OperApp>> ")" => {
+    <n:OperApp> "." <opcode: CallName> "(" <mut args:Comma<Expression>> ")" => {
         let mut v = vec![n];
         v.append(&mut args);
         QuintEx::QuintApp{
@@ -281,17 +231,16 @@ DotCall: QuintEx = {
             args: v,
         }
     },
-    LiteralList,
+    List,
     AtomExp,
 }
 
 // Change to Atom?
 AtomExp: QuintEx = {
-    Number, 
-    Str,
-    Boolean,
-    "(" <e:Expression> ")" => e,
-    "{" <e:Expression> "}" => e,
+    NumberLiteral, 
+    StrLiteral,
+    BooleanLiteral,
+    Groupings,
     // Tuple 'uint'
     "("")" => {
         QuintEx::QuintApp{
@@ -302,7 +251,12 @@ AtomExp: QuintEx = {
     },
 }
 
-/** Structures **/
+Groupings: QuintEx = {
+    "{" <Expression> "}" => <>,
+    "(" <Expression> ")" => <>,
+}
+
+/** Literals **/
 
 Pair: QuintEx = {
     <lhs: AtomExp> "->" <rhs:AtomExp> => {
@@ -316,7 +270,7 @@ Pair: QuintEx = {
 
 // Tuple
 TupleItem: QuintEx = {
-    "." "_" <value: Number> => <>
+    "." "_" <value: NumberLiteral> => <>
 }
 
 Tuple: QuintEx = {
@@ -343,6 +297,64 @@ Tuple: QuintEx = {
     },
 }
 
+// Literal List 
+List: QuintEx = {
+    "[" <args:Comma<Expression>> "]" => {
+        QuintEx::QuintApp{
+            id:id.get(), 
+            opcode: "List".into(), 
+            args,
+        }
+    },
+}
+
+RecordKeyValue: (QuintEx, QuintEx) = {
+    <lhs:Identifier> ":" <rhs:Expression> ","? => {
+        (QuintEx::QuintStr{id: id.get(), value: lhs}, rhs)
+    },
+}
+
+Record: QuintEx = {
+    "{" <a:RecordKeyValue*> "}" => {
+        QuintEx::QuintApp {
+            id:id.get(), 
+            opcode: "Rec".into(),
+            args: a.iter()
+            .flat_map(|tup| once(tup.0.clone()).chain(once(tup.1.clone())))
+            .collect::<Vec<_>>(),
+        }
+    },
+
+    "{" <a:RecordKeyValue*> "}" "." <b: Identifier> => {
+        let rec = QuintEx::QuintApp {
+            id:id.get(), 
+            opcode: "Rec".into(),
+            args: a.iter()
+            .flat_map(|tup| once(tup.0.clone()).chain(once(tup.1.clone())))
+            .collect::<Vec<_>>(),
+        };
+        QuintEx::QuintApp {
+           id:id.get(), 
+            opcode: "field".into(),
+            args: vec![rec, QuintEx::QuintStr{id: id.get(), value: b}]
+        }
+    },
+
+    "{" <a:RecordKeyValue*> "}" "." <n: CallName> "("")" => {
+        let rec = QuintEx::QuintApp {
+            id:id.get(), 
+            opcode: "Rec".into(),
+            args: a.iter()
+            .flat_map(|tup| once(tup.0.clone()).chain(once(tup.1.clone())))
+            .collect::<Vec<_>>(),
+        };
+        QuintEx::QuintApp {
+           id:id.get(), 
+            opcode: n.into(),
+            args: vec![rec]
+        }
+    },
+}
 
 /** qualId, etc... */
 Identifier: QuintName = {
@@ -354,19 +366,20 @@ Identifier: QuintName = {
     "as" => "as".into(),
 }
 
-/** Literals **/
-Number: QuintEx = {
+NumberLiteral: QuintEx = {
     <value:Int> => QuintEx::QuintInt{id: id.get(), value},
     <value:Hex> => QuintEx::QuintInt{id: id.get(), value},
 }
-Str: QuintEx = {
+
+StrLiteral: QuintEx = {
     <value:String> => QuintEx::QuintStr{id: id.get(), value: value.into()}
 }
-Boolean: QuintEx = {
+
+BooleanLiteral: QuintEx = {
     <value:Bool> => QuintEx::QuintBool{id: id.get(), value}
 }
 
-/** Macro for handling arguments: (1,2,), etc.. **/
+/** Macros **/
 #[inline]
 Comma<T>: Vec<T> = {
     => Vec::new(),
@@ -387,7 +400,7 @@ CommaTwo<T>: Vec<T> = {
     }
 };
 
-// Lexer mapping
+/** Lexer mapping **/
 extern {
   type Location = usize;
   type Error = LexicalError;

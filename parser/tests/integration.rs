@@ -121,10 +121,14 @@ fn records() {
     assert!(with_value("{a: 10}").is_ok());
     assert!(with_value("{ a: 2, b: true }").is_ok());
     assert!(with_value("{ a: 2, b: true, c: 1+2 }").is_ok());
+    assert!(with_value("Rec(\"a\",10)").is_ok());
 
     check_expr!("{a: 10}.a", 10i64, i64);
     check_expr!("{ a: 2, b: true }.b", true, bool);
 
     // TODO: This is broken needs updates in grammar
-    //assert!(with_value("{a: 10}.fieldNames()").is_ok());
+    assert!(with_value("Rec(\"a\",10).fieldNames()").is_ok());
+    assert!(with_value("{a:10}.fieldNames()").is_ok());
+    assert!(with_value("fieldNames({a:10})").is_ok());
+    assert!(with_value("fieldNames(Rec(\"a\",10))").is_ok());
 }
